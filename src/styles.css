@@ -1,0 +1,90 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme {
+  --color-canvas: #eeeae3;
+  --color-panel: #f6f2ea;
+  --color-card: #fffcf7;
+  --color-ink: #1a1916;
+  --color-muted: #6f6a63;
+  --color-faint: #9a948c;
+  --color-accent: #2f3a44;
+  --color-accent-fg: #f6f2ea;
+  --color-line: #e4ddd2;
+  --color-danger: #8f3d32;
+  --color-done: #4a6a52;
+
+  --font-sans: "Noto Sans SC", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Noto Serif SC", "Noto Serif", ui-serif, Georgia, serif;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+
+  --shadow-card:
+    0 0 0 1px rgb(26 25 22 / 0.06),
+    0 1px 2px -1px rgb(26 25 22 / 0.06),
+    0 2px 6px 0 rgb(26 25 22 / 0.04);
+  --shadow-lift:
+    0 0 0 1px rgb(26 25 22 / 0.08),
+    0 2px 8px -1px rgb(26 25 22 / 0.08),
+    0 8px 20px -4px rgb(26 25 22 / 0.08);
+  --shadow-grab:
+    0 0 0 1px rgb(26 25 22 / 0.08),
+    0 16px 40px -12px rgb(26 25 22 / 0.28);
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-smooth-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --motion-quick: 150ms;
+  --motion-fast: 250ms;
+  --motion-slow: 400ms;
+
+  --scale-96: 0.96;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html,
+  body,
+  #app {
+    min-height: 100dvh;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
