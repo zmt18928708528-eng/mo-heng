@@ -21,6 +21,15 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>;
 }
 
+function parseDueAt(raw: unknown): number | null {
+  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+  if (typeof raw === "string" && raw.trim()) {
+    const parsed = Date.parse(raw);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+  return null;
+}
+
 function parseCard(id: string, raw: unknown): KanbanCard | null {
   const rec = asRecord(raw);
   if (!rec) return null;
@@ -36,7 +45,14 @@ function parseCard(id: string, raw: unknown): KanbanCard | null {
       ? rec.updatedAt
       : createdAt;
   const cardId = typeof rec.id === "string" && rec.id.trim() ? rec.id.trim() : id;
-  return { id: cardId, title, description, createdAt, updatedAt };
+  return {
+    id: cardId,
+    title,
+    description,
+    createdAt,
+    updatedAt,
+    dueAt: parseDueAt(rec.dueAt),
+  };
 }
 
 function emptyColumns(): Columns {
