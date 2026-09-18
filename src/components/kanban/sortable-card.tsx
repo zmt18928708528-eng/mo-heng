@@ -50,6 +50,7 @@ export function SortableCard({ card, onEdit, onDelete }: SortableCardProps) {
       <CardFace
         title={card.title}
         description={card.description}
+        dueAt={card.dueAt}
         onDelete={onDelete}
       />
     </div>

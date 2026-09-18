@@ -1,14 +1,22 @@
 import { Trash2 } from "lucide-react";
+import { formatDayLabel } from "@/lib/kanban/dates";
 import { cn } from "@/lib/utils";
 
 type CardFaceProps = {
   title: string;
   description: string;
+  dueAt?: number | null;
   overlay?: boolean;
   onDelete?: () => void;
 };
 
-export function CardFace({ title, description, overlay, onDelete }: CardFaceProps) {
+export function CardFace({
+  title,
+  description,
+  dueAt,
+  overlay,
+  onDelete,
+}: CardFaceProps) {
   return (
     <article
       className={cn(
@@ -37,6 +45,9 @@ export function CardFace({ title, description, overlay, onDelete }: CardFaceProp
       </div>
       {description ? (
         <p className="mt-2 line-clamp-4 text-sm leading-normal text-muted">{description}</p>
+      ) : null}
+      {dueAt ? (
+        <p className="mt-2 text-xs text-muted">{formatDayLabel(dueAt)}</p>
       ) : null}
     </article>
   );

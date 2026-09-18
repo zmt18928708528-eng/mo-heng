@@ -8,6 +8,7 @@ export type KanbanCard = {
   description: string;
   createdAt: number;
   updatedAt: number;
+  dueAt?: number | null;
 };
 
 export type Columns = Record<ColumnId, string[]>;

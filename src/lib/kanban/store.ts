@@ -10,11 +10,17 @@ import {
 } from "./types";
 import { mergeBoards, type ParsedBoard } from "./io";
 
+type CardFields = {
+  title: string;
+  description: string;
+  dueAt?: number | null;
+};
+
 type KanbanState = {
   cards: Record<string, KanbanCard>;
   columns: Columns;
-  addCard: (columnId: ColumnId, title: string, description: string) => string;
-  updateCard: (id: string, title: string, description: string) => void;
+  addCard: (columnId: ColumnId, fields: CardFields) => string;
+  updateCard: (id: string, fields: CardFields) => void;
   deleteCard: (id: string) => void;
   moveCard: (activeId: string, overId: string) => void;
   replaceBoard: (board: ParsedBoard) => void;
@@ -30,6 +36,7 @@ const seedCards: Record<string, KanbanCard> = {
     description: "把三次讨论里的结论、待确认项和截止日期汇总成一页。",
     createdAt: now,
     updatedAt: now,
+    dueAt: now,
   },
   c2: {
     id: "c2",
@@ -37,6 +44,7 @@ const seedCards: Record<string, KanbanCard> = {
     description: "按优先级重排下个迭代的交付项，并标出依赖。",
     createdAt: now + 1,
     updatedAt: now + 1,
+    dueAt: now + 86_400_000 * 2,
   },
   c3: {
     id: "c3",
@@ -84,7 +92,7 @@ export const useKanbanStore = create<KanbanState>()(
       cards: seedCards,
       columns: seedColumns,
 
-      addCard: (columnId, title, description) => {
+      addCard: (columnId, fields) => {
         const id =
           typeof crypto !== "undefined" && crypto.randomUUID
             ? crypto.randomUUID()
@@ -92,10 +100,11 @@ export const useKanbanStore = create<KanbanState>()(
         const ts = Date.now();
         const card: KanbanCard = {
           id,
-          title: title.trim(),
-          description: description.trim(),
+          title: fields.title.trim(),
+          description: fields.description.trim(),
           createdAt: ts,
           updatedAt: ts,
+          dueAt: fields.dueAt ?? null,
         };
         set((state) => ({
           cards: { ...state.cards, [id]: card },
@@ -107,7 +116,7 @@ export const useKanbanStore = create<KanbanState>()(
         return id;
       },
 
-      updateCard: (id, title, description) => {
+      updateCard: (id, fields) => {
         set((state) => {
           const prev = state.cards[id];
           if (!prev) return state;
@@ -116,8 +125,9 @@ export const useKanbanStore = create<KanbanState>()(
               ...state.cards,
               [id]: {
                 ...prev,
-                title: title.trim(),
-                description: description.trim(),
+                title: fields.title.trim(),
+                description: fields.description.trim(),
+                dueAt: fields.dueAt ?? null,
                 updatedAt: Date.now(),
               },
             },
