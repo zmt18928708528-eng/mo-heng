@@ -43,6 +43,7 @@ function StaticColumnList({
           <CardFace
             title={card.title}
             description={card.description}
+            dueAt={card.dueAt}
             onDelete={() => onDelete(card.id)}
           />
         </div>
