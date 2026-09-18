@@ -17,7 +17,7 @@ import {
   type DropAnimation,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { LayoutGrid } from "lucide-react";
+import { Download, LayoutGrid, Upload } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,8 +28,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import { COLUMN_IDS, isColumnId, type ColumnId, type KanbanCard } from "@/lib/kanban/types";
 import { findColumn, useKanbanStore } from "@/lib/kanban/store";
+import { parseBackup, serializeBackup, type ParsedBoard } from "@/lib/kanban/io";
 import { CardFace } from "./card-face";
 import { CardDialog, type CardEditor } from "./card-dialog";
 import { Column } from "./column";
@@ -93,11 +95,16 @@ export function Board() {
   const updateCard = useKanbanStore((s) => s.updateCard);
   const deleteCard = useKanbanStore((s) => s.deleteCard);
   const moveCard = useKanbanStore((s) => s.moveCard);
+  const replaceBoard = useKanbanStore((s) => s.replaceBoard);
+  const mergeBoard = useKanbanStore((s) => s.mergeBoard);
 
   const [interactive, setInteractive] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [editor, setEditor] = useState<CardEditor>({ mode: "closed" });
   const [pendingDelete, setPendingDelete] = useState<KanbanCard | null>(null);
+  const [pendingImport, setPendingImport] = useState<ParsedBoard | null>(null);
+  const [ioMessage, setIoMessage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const movedToNewColumn = useRef(false);
 
   useEffect(() => {
@@ -122,6 +129,10 @@ export function Board() {
     () => COLUMN_IDS.reduce((sum, id) => sum + columns[id].length, 0),
     [columns],
   );
+
+  const incomingCount = pendingImport
+    ? Object.keys(pendingImport.cards).length
+    : 0;
 
   const activeCard = activeId ? cards[activeId] : undefined;
 
@@ -182,6 +193,32 @@ export function Board() {
     if (card) setPendingDelete(card);
   }
 
+  function handleExport() {
+    const json = serializeBackup({ cards, columns });
+    const blob = new Blob([json], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const stamp = new Date().toISOString().slice(0, 10);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `mo-heng-${stamp}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setIoMessage(`已导出 ${total} 张卡片`);
+  }
+
+  async function handleFile(file: File) {
+    try {
+      const text = await file.text();
+      const board = parseBackup(text);
+      setPendingImport(board);
+      setIoMessage(null);
+    } catch (error) {
+      setIoMessage(error instanceof Error ? error.message : "导入失败");
+    }
+  }
+
   const columnProps = {
     cards,
     columns,
@@ -202,12 +239,43 @@ export function Board() {
             墨衡
           </h1>
           <p className="mt-1.5 max-w-md text-sm leading-normal text-muted">
-            待办、进行中、已完成。拖动卡片换列，点击卡片编辑。
+            待办、进行中、已完成。拖动卡片换列，点击卡片编辑。可导出 JSON 备份，也可从文件导入。
           </p>
         </div>
-        <p className="shrink-0 pb-1 text-sm tabular-nums text-muted">
-          <span className="font-medium text-ink">{total}</span> 张卡片
-        </p>
+        <div className="flex shrink-0 flex-col items-end gap-2 pb-1">
+          <p className="text-sm tabular-nums text-muted">
+            <span className="font-medium text-ink">{total}</span> 张卡片
+          </p>
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (file) void handleFile(file);
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Upload />
+              导入
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={handleExport}>
+              <Download />
+              导出
+            </Button>
+          </div>
+          {ioMessage ? (
+            <p className="max-w-48 text-right text-xs leading-snug text-muted">{ioMessage}</p>
+          ) : null}
+        </div>
       </header>
 
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pb-8 sm:px-6">
@@ -269,6 +337,45 @@ export function Board() {
               }}
             >
               删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={Boolean(pendingImport)}
+        onOpenChange={(open) => {
+          if (!open) setPendingImport(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>导入 {incomingCount} 张卡片</AlertDialogTitle>
+            <AlertDialogDescription>
+              可以覆盖当前看板，也可以合并进去。合并时，相同 ID 的卡片会被导入文件里的内容替换。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!pendingImport) return;
+                mergeBoard(pendingImport);
+                setPendingImport(null);
+                setIoMessage(`已合并导入 ${incomingCount} 张卡片`);
+              }}
+            >
+              合并
+            </AlertDialogAction>
+            <AlertDialogAction
+              onClick={() => {
+                if (!pendingImport) return;
+                replaceBoard(pendingImport);
+                setPendingImport(null);
+                setIoMessage(`已覆盖导入 ${incomingCount} 张卡片`);
+              }}
+            >
+              覆盖
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
