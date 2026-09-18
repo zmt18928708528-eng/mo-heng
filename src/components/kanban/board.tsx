@@ -29,6 +29,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { COLUMN_IDS, isColumnId, type ColumnId, type KanbanCard } from "@/lib/kanban/types";
 import { findColumn, useKanbanStore } from "@/lib/kanban/store";
 import { parseBackup, serializeBackup, type ParsedBoard } from "@/lib/kanban/io";
@@ -246,7 +247,7 @@ export function Board() {
           <p className="text-sm tabular-nums text-muted">
             <span className="font-medium text-ink">{total}</span> 张卡片
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <input
               ref={fileInputRef}
               type="file"
@@ -258,6 +259,7 @@ export function Board() {
                 if (file) void handleFile(file);
               }}
             />
+            <ThemeToggle />
             <Button
               type="button"
               variant="outline"
