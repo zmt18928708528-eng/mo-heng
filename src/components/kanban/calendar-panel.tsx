@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -6,6 +7,7 @@ import {
   formatMonthTitle,
   sameDay,
   startOfDay,
+  toDayKey,
 } from "@/lib/kanban/dates";
 import { COLUMN_META, type ColumnId, type KanbanCard } from "@/lib/kanban/types";
 import { cn } from "@/lib/utils";
@@ -35,7 +37,18 @@ export function CalendarPanel({
 }: CalendarPanelProps) {
   const today = startOfDay(new Date());
   const cells = buildMonthCells(month);
-  const dayCards = cards.filter((card) => card.dueAt && sameDay(card.dueAt, selected));
+  const cardsByDay = useMemo(() => {
+    const grouped = new Map<string, KanbanCard[]>();
+    for (const card of cards) {
+      if (card.dueAt == null || !Number.isFinite(card.dueAt)) continue;
+      const key = toDayKey(card.dueAt);
+      const day = grouped.get(key);
+      if (day) day.push(card);
+      else grouped.set(key, [card]);
+    }
+    return grouped;
+  }, [cards]);
+  const dayCards = cardsByDay.get(toDayKey(selected)) ?? [];
 
   function shiftMonth(delta: number) {
     onMonthChange(new Date(month.getFullYear(), month.getMonth() + delta, 1));
@@ -93,12 +106,15 @@ export function CalendarPanel({
               const inMonth = cell.getMonth() === month.getMonth();
               const isToday = sameDay(cell, today);
               const isSelected = sameDay(cell, selected);
-              const count = cards.filter((card) => card.dueAt && sameDay(card.dueAt, cell)).length;
+              const count = cardsByDay.get(toDayKey(cell))?.length ?? 0;
               return (
                 <button
                   key={cell.toISOString()}
                   type="button"
                   onClick={() => onSelect(cell)}
+                  aria-label={`${toDayKey(cell)}，${count} 张卡片`}
+                  aria-pressed={isSelected}
+                  aria-current={isToday ? "date" : undefined}
                   className={cn(
                     "flex h-11 flex-col items-center justify-center rounded-sm text-sm transition-[background-color,color] duration-(--motion-quick) ease-(--ease-out)",
                     inMonth ? "text-ink" : "text-faint",
@@ -142,7 +158,9 @@ export function CalendarPanel({
                 >
                   <span className="block text-sm font-medium text-ink">{card.title}</span>
                   {column ? (
-                    <span className="mt-0.5 block text-xs text-muted">{COLUMN_META[column].title}</span>
+                    <span className="mt-0.5 block text-xs text-muted">
+                      {COLUMN_META[column].title}
+                    </span>
                   ) : null}
                 </button>
               );

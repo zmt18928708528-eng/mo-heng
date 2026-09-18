@@ -1,4 +1,4 @@
-import { COLUMN_IDS, isColumnId, type ColumnId, type Columns, type KanbanCard } from "./types";
+import { COLUMN_IDS, isColumnId, type ColumnId, type Columns, type KanbanCard } from "./types.ts";
 
 export const BACKUP_VERSION = 1;
 export const BACKUP_KIND = "mo-heng-kanban";
@@ -22,7 +22,8 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 }
 
 function parseDueAt(raw: unknown): number | null {
-  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+  if (typeof raw === "number" && Number.isFinite(raw) && !Number.isNaN(new Date(raw).getTime()))
+    return raw;
   if (typeof raw === "string" && raw.trim()) {
     const parsed = Date.parse(raw);
     return Number.isNaN(parsed) ? null : parsed;
@@ -41,10 +42,11 @@ function parseCard(id: string, raw: unknown): KanbanCard | null {
       ? rec.createdAt
       : Date.now();
   const updatedAt =
-    typeof rec.updatedAt === "number" && Number.isFinite(rec.updatedAt)
-      ? rec.updatedAt
-      : createdAt;
-  const cardId = typeof rec.id === "string" && rec.id.trim() ? rec.id.trim() : id;
+    typeof rec.updatedAt === "number" && Number.isFinite(rec.updatedAt) ? rec.updatedAt : createdAt;
+  // Object keys are the canonical IDs referenced by columns.
+  const cardId = id.trim();
+  if (!cardId || isColumnId(cardId) || ["__proto__", "constructor", "prototype"].includes(cardId))
+    return null;
   return {
     id: cardId,
     title,
@@ -70,12 +72,11 @@ function parseColumns(raw: unknown, cards: Record<string, KanbanCard>): Columns 
   for (const col of COLUMN_IDS) {
     const list = rec[col];
     if (!Array.isArray(list)) continue;
-    columns[col] = list
-      .filter((id): id is string => typeof id === "string" && Boolean(cards[id]) && !seen.has(id))
-      .map((id) => {
-        seen.add(id);
-        return id;
-      });
+    columns[col] = list.filter((id): id is string => {
+      if (typeof id !== "string" || !Object.hasOwn(cards, id) || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
   }
   for (const id of Object.keys(cards)) {
     if (!seen.has(id)) columns.todo.push(id);
@@ -88,9 +89,7 @@ function parseCardsArray(list: unknown[]): Record<string, KanbanCard> {
   list.forEach((item, index) => {
     const rec = asRecord(item);
     const fallbackId =
-      rec && typeof rec.id === "string" && rec.id.trim()
-        ? rec.id.trim()
-        : `imported-${index + 1}`;
+      rec && typeof rec.id === "string" && rec.id.trim() ? rec.id.trim() : `imported-${index + 1}`;
     const card = parseCard(fallbackId, item);
     if (card) cards[card.id] = card;
   });
@@ -129,23 +128,22 @@ export function parseBackup(text: string): ParsedBoard {
   }
 
   const rec = asRecord(data);
-  if (!rec) throw new Error("备份格式无法识别。");
-
-  const nested = asRecord(rec.state) ?? rec;
-  let cards: Record<string, KanbanCard> = {};
-
-  if (Array.isArray(nested.cards)) {
-    cards = parseCardsArray(nested.cards);
-  } else {
-    const cardsRec = asRecord(nested.cards);
-    if (cardsRec) cards = parseCardsRecord(cardsRec);
+  if (!rec && !Array.isArray(data)) throw new Error("备份格式无法识别。");
+  if (rec?.kind !== undefined && rec.kind !== BACKUP_KIND) {
+    throw new Error("这不是墨衡看板备份。");
+  }
+  if (rec?.kind === BACKUP_KIND && rec.version !== BACKUP_VERSION) {
+    throw new Error("不支持此备份版本，请使用兼容版本的墨衡打开。");
   }
 
-  if (Object.keys(cards).length === 0 && Array.isArray(data)) {
-    cards = parseCardsArray(data);
-  }
-
-  if (Object.keys(cards).length === 0) {
+  const nested = rec ? (asRecord(rec.state) ?? rec) : { cards: data };
+  const cardsRec = asRecord(nested.cards);
+  const list = Array.isArray(nested.cards) ? nested.cards : null;
+  if (!cardsRec && !list) throw new Error("备份缺少卡片数据。");
+  const cards = list ? parseCardsArray(list) : parseCardsRecord(cardsRec!);
+  const sourceCount = list ? list.length : Object.keys(cardsRec!).length;
+  // A genuinely empty board is valid; malformed nonempty data must not erase it.
+  if (sourceCount > 0 && Object.keys(cards).length === 0) {
     throw new Error("备份里没有可用的卡片。");
   }
 
@@ -163,7 +161,7 @@ export function mergeBoards(current: ParsedBoard, incoming: ParsedBoard): Parsed
   for (const col of COLUMN_IDS) {
     const ids = [...current.columns[col], ...incoming.columns[col]];
     columns[col] = ids.filter((id) => {
-      if (!cards[id] || seen.has(id)) return false;
+      if (!Object.hasOwn(cards, id) || seen.has(id)) return false;
       seen.add(id);
       return true;
     });

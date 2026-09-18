@@ -114,6 +114,7 @@ export function Board() {
   const [selectedDay, setSelectedDay] = useState(() => startOfDay(new Date()));
   const fileInputRef = useRef<HTMLInputElement>(null);
   const movedToNewColumn = useRef(false);
+  const dragSnapshot = useRef<ParsedBoard["columns"] | null>(null);
 
   useEffect(() => {
     void useKanbanStore.persist.rehydrate();
@@ -140,13 +141,12 @@ export function Board() {
 
   const cardList = useMemo(() => Object.values(cards), [cards]);
 
-  const incomingCount = pendingImport
-    ? Object.keys(pendingImport.cards).length
-    : 0;
+  const incomingCount = pendingImport ? Object.keys(pendingImport.cards).length : 0;
 
   const activeCard = activeId ? cards[activeId] : undefined;
 
   function handleDragStart(event: DragStartEvent) {
+    dragSnapshot.current = useKanbanStore.getState().columns;
     setActiveId(String(event.active.id));
   }
 
@@ -161,19 +161,30 @@ export function Board() {
     const fromCol = findColumn(currentColumns, activeCardId);
     const overType = over.data.current?.type;
     const toCol =
-      overType === "column" && isColumnId(overId)
-        ? overId
-        : findColumn(currentColumns, overId);
+      overType === "column" && isColumnId(overId) ? overId : findColumn(currentColumns, overId);
     if (!fromCol || !toCol || fromCol === toCol) return;
     movedToNewColumn.current = true;
     moveCard(activeCardId, overId);
+  }
+
+  function handleDragCancel() {
+    if (dragSnapshot.current) {
+      useKanbanStore.setState({ columns: dragSnapshot.current });
+    }
+    dragSnapshot.current = null;
+    movedToNewColumn.current = false;
+    setActiveId(null);
   }
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     setActiveId(null);
     movedToNewColumn.current = false;
-    if (!over) return;
+    if (!over) {
+      handleDragCancel();
+      return;
+    }
+    dragSnapshot.current = null;
     const activeCardId = String(active.id);
     const overId = String(over.id);
     if (activeCardId === overId) return;
@@ -295,7 +306,9 @@ export function Board() {
             </Button>
           </div>
           {ioMessage ? (
-            <p className="max-w-48 text-right text-xs leading-snug text-muted">{ioMessage}</p>
+            <p role="status" className="max-w-48 text-right text-xs leading-snug text-muted">
+              {ioMessage}
+            </p>
           ) : null}
         </div>
       </header>
@@ -319,7 +332,7 @@ export function Board() {
             onDragStart={handleDragStart}
             onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
-            onDragCancel={() => setActiveId(null)}
+            onDragCancel={handleDragCancel}
           >
             <BoardColumns interactive {...columnProps} />
             <DragOverlay dropAnimation={dropAnimation}>
@@ -356,9 +369,7 @@ export function Board() {
           <AlertDialogHeader>
             <AlertDialogTitle>删除这张卡片？</AlertDialogTitle>
             <AlertDialogDescription>
-              {pendingDelete
-                ? `「${pendingDelete.title}」将被永久移除，无法恢复。`
-                : ""}
+              {pendingDelete ? `「${pendingDelete.title}」将被永久移除，无法恢复。` : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
