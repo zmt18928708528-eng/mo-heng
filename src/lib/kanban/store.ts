@@ -8,6 +8,7 @@ import {
   type Columns,
   type KanbanCard,
 } from "./types";
+import { mergeBoards, type ParsedBoard } from "./io";
 
 type KanbanState = {
   cards: Record<string, KanbanCard>;
@@ -16,6 +17,8 @@ type KanbanState = {
   updateCard: (id: string, title: string, description: string) => void;
   deleteCard: (id: string) => void;
   moveCard: (activeId: string, overId: string) => void;
+  replaceBoard: (board: ParsedBoard) => void;
+  mergeBoard: (board: ParsedBoard) => void;
 };
 
 const now = 1_725_000_000_000;
@@ -172,6 +175,22 @@ export const useKanbanStore = create<KanbanState>()(
             [toCol]: toIds,
           },
         });
+      },
+
+      replaceBoard: (board) => {
+        set({
+          cards: board.cards,
+          columns: board.columns,
+        });
+      },
+
+      mergeBoard: (board) => {
+        const current = get();
+        const next = mergeBoards(
+          { cards: current.cards, columns: current.columns },
+          board,
+        );
+        set(next);
       },
     }),
     {
