@@ -1,9 +1,18 @@
+import { useEffect } from "react";
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
 import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
+import { THEME_BOOTSTRAP_SCRIPT, useThemeStore } from "@/lib/theme";
 import appCss from "../styles.css?url";
 
 const APP_NAME = "墨衡";
+
+function ThemeHydration() {
+  useEffect(() => {
+    void useThemeStore.persist.rehydrate();
+  }, []);
+  return null;
+}
 
 export const Route = createRootRoute({
   head: () => ({
@@ -13,6 +22,7 @@ export const Route = createRootRoute({
       { title: APP_NAME },
       { name: "description", content: "三列看板：待办、进行中、已完成。拖动卡片，本地保存。" },
       { name: "theme-color", content: "#eeeae3" },
+      { name: "color-scheme", content: "light dark" },
     ],
     links: [
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
@@ -30,9 +40,11 @@ export const Route = createRootRoute({
   component: () => (
     <html lang="zh-CN" className="antialiased" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }} />
         <HeadContent />
       </head>
       <body>
+        <ThemeHydration />
         <PreviewHostBridge />
         <AuthProvider>
           <Outlet />

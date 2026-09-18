@@ -44,10 +44,41 @@
   --scale-96: 0.96;
 }
 
+html.dark {
+  --color-canvas: #161513;
+  --color-panel: #1e1c19;
+  --color-card: #26231f;
+  --color-ink: #f3eee6;
+  --color-muted: #a39b91;
+  --color-faint: #7a736b;
+  --color-accent: #d7c4a3;
+  --color-accent-fg: #1a1916;
+  --color-line: #35312c;
+  --color-danger: #d27a6e;
+  --color-done: #8fb396;
+
+  --shadow-card:
+    0 0 0 1px rgb(243 238 230 / 0.06),
+    0 1px 2px -1px rgb(0 0 0 / 0.35),
+    0 2px 8px 0 rgb(0 0 0 / 0.28);
+  --shadow-lift:
+    0 0 0 1px rgb(243 238 230 / 0.08),
+    0 2px 8px -1px rgb(0 0 0 / 0.4),
+    0 10px 24px -6px rgb(0 0 0 / 0.45);
+  --shadow-grab:
+    0 0 0 1px rgb(243 238 230 / 0.1),
+    0 16px 40px -12px rgb(0 0 0 / 0.65);
+}
+
 @layer base {
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
   }
 
   html,
@@ -60,6 +91,9 @@
     background-color: var(--color-canvas);
     color: var(--color-ink);
     font-family: var(--font-sans);
+    transition:
+      background-color var(--motion-fast) var(--ease-out),
+      color var(--motion-fast) var(--ease-out);
   }
 
   h1,
