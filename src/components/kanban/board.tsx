@@ -30,11 +30,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { startOfDay } from "@/lib/kanban/dates";
 import { COLUMN_IDS, isColumnId, type ColumnId, type KanbanCard } from "@/lib/kanban/types";
 import { findColumn, useKanbanStore } from "@/lib/kanban/store";
 import { parseBackup, serializeBackup, type ParsedBoard } from "@/lib/kanban/io";
 import { CardFace } from "./card-face";
 import { CardDialog, type CardEditor } from "./card-dialog";
+import { CalendarPanel } from "./calendar-panel";
 import { Column } from "./column";
 
 const dropAnimation: DropAnimation = {
@@ -105,6 +107,11 @@ export function Board() {
   const [pendingDelete, setPendingDelete] = useState<KanbanCard | null>(null);
   const [pendingImport, setPendingImport] = useState<ParsedBoard | null>(null);
   const [ioMessage, setIoMessage] = useState<string | null>(null);
+  const [month, setMonth] = useState(() => {
+    const today = new Date();
+    return new Date(today.getFullYear(), today.getMonth(), 1);
+  });
+  const [selectedDay, setSelectedDay] = useState(() => startOfDay(new Date()));
   const fileInputRef = useRef<HTMLInputElement>(null);
   const movedToNewColumn = useRef(false);
 
@@ -130,6 +137,8 @@ export function Board() {
     () => COLUMN_IDS.reduce((sum, id) => sum + columns[id].length, 0),
     [columns],
   );
+
+  const cardList = useMemo(() => Object.values(cards), [cards]);
 
   const incomingCount = pendingImport
     ? Object.keys(pendingImport.cards).length
@@ -171,17 +180,22 @@ export function Board() {
     moveCard(activeCardId, overId);
   }
 
-  function handleSave(title: string, description: string) {
+  function handleSave(title: string, description: string, dueAt: number | null) {
+    const fields = { title, description, dueAt };
     if (editor.mode === "create") {
-      addCard(editor.columnId, title, description);
+      addCard(editor.columnId, fields);
     } else if (editor.mode === "edit") {
-      updateCard(editor.card.id, title, description);
+      updateCard(editor.card.id, fields);
     }
     setEditor({ mode: "closed" });
   }
 
   function handleAdd(columnId: ColumnId) {
     setEditor({ mode: "create", columnId });
+  }
+
+  function handleAddForDay(day: Date) {
+    setEditor({ mode: "create", columnId: "todo", dueAt: startOfDay(day).getTime() });
   }
 
   function handleEdit(cardId: string) {
@@ -192,6 +206,12 @@ export function Board() {
   function handleDelete(cardId: string) {
     const card = cards[cardId];
     if (card) setPendingDelete(card);
+  }
+
+  function handleSelectDay(day: Date) {
+    const next = startOfDay(day);
+    setSelectedDay(next);
+    setMonth(new Date(next.getFullYear(), next.getMonth(), 1));
   }
 
   function handleExport() {
@@ -240,7 +260,7 @@ export function Board() {
             墨衡
           </h1>
           <p className="mt-1.5 max-w-md text-sm leading-normal text-muted">
-            待办、进行中、已完成。拖动卡片换列，点击卡片编辑。可导出 JSON 备份，也可从文件导入。
+            待办、进行中、已完成。上方日历可看每天的卡片，点击卡片可设日期。
           </p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2 pb-1">
@@ -281,6 +301,16 @@ export function Board() {
       </header>
 
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pb-8 sm:px-6">
+        <CalendarPanel
+          month={month}
+          selected={selectedDay}
+          cards={cardList}
+          columnOf={(id) => findColumn(columns, id)}
+          onMonthChange={setMonth}
+          onSelect={handleSelectDay}
+          onOpenCard={handleEdit}
+          onAddForDay={handleAddForDay}
+        />
         {interactive ? (
           <DndContext
             id="mo-heng-board"
@@ -298,6 +328,7 @@ export function Board() {
                   <CardFace
                     title={activeCard.title}
                     description={activeCard.description}
+                    dueAt={activeCard.dueAt}
                     overlay
                   />
                 </div>
