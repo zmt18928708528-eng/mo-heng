@@ -11,31 +11,35 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { fromDayKey, toDayKey } from "@/lib/kanban/dates";
 import { COLUMN_META, type ColumnId, type KanbanCard } from "@/lib/kanban/types";
 
 export type CardEditor =
   | { mode: "closed" }
-  | { mode: "create"; columnId: ColumnId }
+  | { mode: "create"; columnId: ColumnId; dueAt?: number | null }
   | { mode: "edit"; card: KanbanCard };
 
 type CardDialogProps = {
   editor: CardEditor;
   onClose: () => void;
-  onSave: (title: string, description: string) => void;
+  onSave: (title: string, description: string, dueAt: number | null) => void;
 };
 
 export function CardDialog({ editor, onClose, onSave }: CardDialogProps) {
   const open = editor.mode !== "closed";
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [dueKey, setDueKey] = useState("");
 
   useEffect(() => {
     if (editor.mode === "create") {
       setTitle("");
       setDescription("");
+      setDueKey(editor.dueAt ? toDayKey(editor.dueAt) : "");
     } else if (editor.mode === "edit") {
       setTitle(editor.card.title);
       setDescription(editor.card.description);
+      setDueKey(editor.card.dueAt ? toDayKey(editor.card.dueAt) : "");
     }
   }, [editor]);
 
@@ -48,7 +52,8 @@ export function CardDialog({ editor, onClose, onSave }: CardDialogProps) {
     event.preventDefault();
     const nextTitle = title.trim();
     if (!nextTitle) return;
-    onSave(nextTitle, description.trim());
+    const due = dueKey ? fromDayKey(dueKey) : null;
+    onSave(nextTitle, description.trim(), due ? due.getTime() : null);
   }
 
   return (
@@ -58,7 +63,7 @@ export function CardDialog({ editor, onClose, onSave }: CardDialogProps) {
           <DialogHeader>
             <DialogTitle>{heading}</DialogTitle>
             <DialogDescription>
-              填写标题，描述可选。拖动卡片即可在列之间移动。
+              填写标题，描述和日期可选。有日期的卡片会出现在日历里。
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4">
@@ -82,6 +87,15 @@ export function CardDialog({ editor, onClose, onSave }: CardDialogProps) {
                 onChange={(event) => setDescription(event.target.value)}
                 placeholder="补充背景、步骤或截止时间"
                 maxLength={400}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="card-due">日期</Label>
+              <Input
+                id="card-due"
+                type="date"
+                value={dueKey}
+                onChange={(event) => setDueKey(event.target.value)}
               />
             </div>
           </div>
