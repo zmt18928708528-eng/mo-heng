@@ -17,16 +17,22 @@ function same(a: string, b: string): boolean {
   return timingSafeEqual(left, right);
 }
 
-export const unlockApp = createServerFn({ method: "POST" }).handler(
-  async (ctx: { data?: { username?: string; password?: string } }) => {
-    const username = String(ctx.data?.username ?? "");
-    const password = String(ctx.data?.password ?? "");
+type LockPayload = { username: string; password: string };
+
+export const unlockApp = createServerFn({ method: "POST" })
+  .validator((input: unknown): LockPayload => {
+    const rec = input && typeof input === "object" ? (input as Record<string, unknown>) : {};
+    return {
+      username: typeof rec.username === "string" ? rec.username : "",
+      password: typeof rec.password === "string" ? rec.password : "",
+    };
+  })
+  .handler(async ({ data }) => {
     const expectedUser = readEnv("MO_HENG_USER") ?? DEFAULT_LOCK_USER;
     const expectedPass = readEnv("MO_HENG_PASSWORD") ?? DEFAULT_LOCK_PASSWORD;
-    const ok = same(username, expectedUser) && same(password, expectedPass);
+    const ok = same(data.username, expectedUser) && same(data.password, expectedPass);
     if (!ok) {
       return { ok: false as const, message: "账号或密码不对" };
     }
     return { ok: true as const };
-  },
-);
+  });
