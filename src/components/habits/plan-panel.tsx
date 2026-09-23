@@ -20,10 +20,10 @@ export function PlanPanel({ day }: { day: Date }) {
       <div className="mb-3 flex items-end justify-between gap-3">
         <div>
           <h2 className="font-display text-lg font-medium tracking-tight text-ink">
-            提前规划
+            每日打卡
           </h2>
           <p className="mt-0.5 text-sm text-muted">
-            {formatDayLabel(day)}·三项单独打卡，进度保存在本地
+            {formatDayLabel(day)}·运动、不喝糖、洗澡10分钟内各自打卡，记录会出现在日历上
           </p>
         </div>
         <p className="text-sm tabular-nums text-muted">

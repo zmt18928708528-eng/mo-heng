@@ -120,6 +120,7 @@ export function Column({
             meta.tone === "accent" && "bg-accent",
             meta.tone === "done" && "bg-done",
             meta.tone === "muted" && "bg-muted",
+            meta.tone === "plan" && "bg-danger",
           )}
           aria-hidden="true"
         />

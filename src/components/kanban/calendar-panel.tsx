@@ -10,14 +10,23 @@ import {
   toDayKey,
 } from "@/lib/kanban/dates";
 import { COLUMN_META, type ColumnId, type KanbanCard } from "@/lib/kanban/types";
+import { HABIT_IDS, HABIT_META, type DayHabits } from "@/lib/habits/types";
+import { habitsForDay } from "@/lib/habits/store";
 import { cn } from "@/lib/utils";
 
 const WEEKDAYS = ["一", "二", "三", "四", "五", "六", "日"];
+
+const HABIT_MARK: Record<(typeof HABIT_IDS)[number], string> = {
+  exercise: "运",
+  noSugar: "糖",
+  quickShower: "浴",
+};
 
 type CalendarPanelProps = {
   month: Date;
   selected: Date;
   cards: KanbanCard[];
+  habitsByDay: Record<string, DayHabits>;
   columnOf: (cardId: string) => ColumnId | null;
   onMonthChange: (month: Date) => void;
   onSelect: (day: Date) => void;
@@ -29,6 +38,7 @@ export function CalendarPanel({
   month,
   selected,
   cards,
+  habitsByDay,
   columnOf,
   onMonthChange,
   onSelect,
@@ -49,6 +59,8 @@ export function CalendarPanel({
     return grouped;
   }, [cards]);
   const dayCards = cardsByDay.get(toDayKey(selected)) ?? [];
+  const selectedHabits = habitsForDay(habitsByDay, selected);
+  const selectedHabitDone = HABIT_IDS.filter((id) => selectedHabits[id]);
 
   function shiftMonth(delta: number) {
     onMonthChange(new Date(month.getFullYear(), month.getMonth() + delta, 1));
@@ -107,16 +119,18 @@ export function CalendarPanel({
               const isToday = sameDay(cell, today);
               const isSelected = sameDay(cell, selected);
               const count = cardsByDay.get(toDayKey(cell))?.length ?? 0;
+              const dayHabits = habitsForDay(habitsByDay, cell);
+              const habitMarks = HABIT_IDS.filter((id) => dayHabits[id]);
               return (
                 <button
                   key={cell.toISOString()}
                   type="button"
                   onClick={() => onSelect(cell)}
-                  aria-label={`${toDayKey(cell)}，${count} 张卡片`}
+                  aria-label={`${toDayKey(cell)}，${count} 张卡片，打卡 ${habitMarks.length} 项`}
                   aria-pressed={isSelected}
                   aria-current={isToday ? "date" : undefined}
                   className={cn(
-                    "flex h-11 flex-col items-center justify-center rounded-sm text-sm transition-[background-color,color] duration-(--motion-quick) ease-(--ease-out)",
+                    "flex h-14 flex-col items-center justify-center rounded-sm text-sm transition-[background-color,color] duration-(--motion-quick) ease-(--ease-out)",
                     inMonth ? "text-ink" : "text-faint",
                     isSelected && "bg-accent text-accent-fg",
                     !isSelected && isToday && "ring-1 ring-accent/40",
@@ -124,17 +138,29 @@ export function CalendarPanel({
                   )}
                 >
                   <span className="leading-none">{cell.getDate()}</span>
-                  {count > 0 ? (
-                    <span
-                      className={cn(
-                        "mt-1 size-1 rounded-full",
-                        isSelected ? "bg-accent-fg" : "bg-accent",
-                      )}
-                      aria-hidden="true"
-                    />
-                  ) : (
-                    <span className="mt-1 size-1" aria-hidden="true" />
-                  )}
+                  <span className="mt-1 flex h-3 items-center justify-center gap-0.5">
+                    {count > 0 ? (
+                      <span
+                        className={cn(
+                          "size-1 rounded-full",
+                          isSelected ? "bg-accent-fg" : "bg-accent",
+                        )}
+                        aria-hidden="true"
+                      />
+                    ) : null}
+                    {habitMarks.map((id) => (
+                      <span
+                        key={id}
+                        className={cn(
+                          "text-[9px] leading-none",
+                          isSelected ? "text-accent-fg" : "text-done",
+                        )}
+                        aria-hidden="true"
+                      >
+                        {HABIT_MARK[id]}
+                      </span>
+                    ))}
+                  </span>
                 </button>
               );
             })}
@@ -145,7 +171,22 @@ export function CalendarPanel({
           <p className="text-sm font-medium text-ink">{formatDayLabel(selected)}</p>
           <p className="mt-0.5 text-xs text-muted">
             {dayCards.length ? `${dayCards.length} 张卡片` : "这一天还没有卡片"}
+            {selectedHabitDone.length
+              ? `·已打卡 ${selectedHabitDone.length} 项`
+              : "·尚未打卡"}
           </p>
+          {selectedHabitDone.length ? (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {selectedHabitDone.map((id) => (
+                <span
+                  key={id}
+                  className="rounded-full bg-done/15 px-2 py-0.5 text-xs text-done"
+                >
+                  {HABIT_META[id].title}
+                </span>
+              ))}
+            </div>
+          ) : null}
           <div className="mt-3 flex flex-1 flex-col gap-2">
             {dayCards.map((card) => {
               const column = columnOf(card.id);
