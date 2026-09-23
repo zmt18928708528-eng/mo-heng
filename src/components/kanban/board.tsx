@@ -18,7 +18,7 @@ import {
   type DropAnimation,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { Download, LayoutGrid, LogOut, Upload } from "lucide-react";
+import { Download, LayoutGrid, LogOut, Upload, UserRound } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +32,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PlanPanel } from "@/components/habits/plan-panel";
+import { AccountDialog } from "@/components/lock/account-dialog";
 import { startOfDay } from "@/lib/kanban/dates";
 import { COLUMN_IDS, isColumnId, type ColumnId, type KanbanCard } from "@/lib/kanban/types";
 import { findColumn, useKanbanStore } from "@/lib/kanban/store";
@@ -112,6 +113,7 @@ export function Board() {
   const [editor, setEditor] = useState<CardEditor>({ mode: "closed" });
   const [pendingDelete, setPendingDelete] = useState<KanbanCard | null>(null);
   const [pendingImport, setPendingImport] = useState<ParsedBoard | null>(null);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [ioMessage, setIoMessage] = useState<string | null>(null);
   const [month, setMonth] = useState(() => {
     const today = new Date();
@@ -302,6 +304,10 @@ export function Board() {
               }}
             />
             <ThemeToggle />
+            <Button type="button" variant="outline" size="sm" onClick={() => setAccountOpen(true)}>
+              <UserRound />
+              账号
+            </Button>
             <Button
               type="button"
               variant="outline"
@@ -375,6 +381,7 @@ export function Board() {
         onClose={() => setEditor({ mode: "closed" })}
         onSave={handleSave}
       />
+      <AccountDialog open={accountOpen} onOpenChange={setAccountOpen} />
 
       <AlertDialog
         open={Boolean(pendingDelete)}
