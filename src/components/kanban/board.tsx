@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { PlanPanel } from "@/components/habits/plan-panel";
 import { startOfDay } from "@/lib/kanban/dates";
 import { COLUMN_IDS, isColumnId, type ColumnId, type KanbanCard } from "@/lib/kanban/types";
 import { findColumn, useKanbanStore } from "@/lib/kanban/store";
@@ -271,7 +272,7 @@ export function Board() {
             墨衡
           </h1>
           <p className="mt-1.5 max-w-md text-sm leading-normal text-muted">
-            待办、进行中、已完成。上方日历可看每天的卡片，点击卡片可设日期。
+            待办、进行中、已完成。日历可看每天卡片；提前规划可按日打卡运动、不喝糖、洗澡10分钟内。
           </p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2 pb-1">
@@ -324,6 +325,7 @@ export function Board() {
           onOpenCard={handleEdit}
           onAddForDay={handleAddForDay}
         />
+        <PlanPanel day={selectedDay} />
         {interactive ? (
           <DndContext
             id="mo-heng-board"
