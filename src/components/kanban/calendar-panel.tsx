@@ -9,7 +9,7 @@ import {
   startOfDay,
   toDayKey,
 } from "@/lib/kanban/dates";
-import { COLUMN_META, type ColumnId, type KanbanCard } from "@/lib/kanban/types";
+import { COLUMN_IDS, COLUMN_META, type ColumnId, type KanbanCard } from "@/lib/kanban/types";
 import { HABIT_IDS, HABIT_META, type DayHabits } from "@/lib/habits/types";
 import { habitsForDay } from "@/lib/habits/store";
 import { cn } from "@/lib/utils";
@@ -31,7 +31,7 @@ type CalendarPanelProps = {
   onMonthChange: (month: Date) => void;
   onSelect: (day: Date) => void;
   onOpenCard: (cardId: string) => void;
-  onAddForDay: (day: Date) => void;
+  onAddForDay: (day: Date, columnId: ColumnId) => void;
 };
 
 export function CalendarPanel({
@@ -207,15 +207,22 @@ export function CalendarPanel({
               );
             })}
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="mt-3"
-            onClick={() => onAddForDay(selected)}
-          >
-            为这天添加
-          </Button>
+          <div className="mt-3">
+            <p className="mb-1.5 text-xs text-muted">为这天添加到</p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {COLUMN_IDS.map((columnId) => (
+                <Button
+                  key={columnId}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onAddForDay(selected, columnId)}
+                >
+                  {COLUMN_META[columnId].title}
+                </Button>
+              ))}
+            </div>
+          </div>
         </aside>
       </div>
     </section>
