@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import {
   DndContext,
   DragOverlay,
@@ -17,7 +18,7 @@ import {
   type DropAnimation,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { Download, LayoutGrid, Upload } from "lucide-react";
+import { Download, LayoutGrid, LogOut, Upload } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,6 +36,7 @@ import { startOfDay } from "@/lib/kanban/dates";
 import { COLUMN_IDS, isColumnId, type ColumnId, type KanbanCard } from "@/lib/kanban/types";
 import { findColumn, useKanbanStore } from "@/lib/kanban/store";
 import { useHabitsStore } from "@/lib/habits/store";
+import { markLocked } from "@/lib/lock/session";
 import { parseBackup, serializeBackup, type ParsedBoard } from "@/lib/kanban/io";
 import { CardFace } from "./card-face";
 import { CardDialog, type CardEditor } from "./card-dialog";
@@ -94,6 +96,7 @@ function BoardColumns({
 }
 
 export function Board() {
+  const navigate = useNavigate();
   const cards = useKanbanStore((s) => s.cards);
   const columns = useKanbanStore((s) => s.columns);
   const addCard = useKanbanStore((s) => s.addCard);
@@ -228,6 +231,11 @@ export function Board() {
     setMonth(new Date(next.getFullYear(), next.getMonth(), 1));
   }
 
+  function handleLogout() {
+    markLocked();
+    void navigate({ to: "/login" });
+  }
+
   function handleExport() {
     const json = serializeBackup({ cards, columns });
     const blob = new Blob([json], { type: "application/json;charset=utf-8" });
@@ -306,6 +314,10 @@ export function Board() {
             <Button type="button" variant="outline" size="sm" onClick={handleExport}>
               <Download />
               导出
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={handleLogout}>
+              <LogOut />
+              登出
             </Button>
           </div>
           {ioMessage ? (
