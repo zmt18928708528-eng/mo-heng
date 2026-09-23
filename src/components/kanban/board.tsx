@@ -213,8 +213,8 @@ export function Board() {
     setEditor({ mode: "create", columnId });
   }
 
-  function handleAddForDay(day: Date) {
-    setEditor({ mode: "create", columnId: "plan", dueAt: startOfDay(day).getTime() });
+  function handleAddForDay(day: Date, columnId: ColumnId) {
+    setEditor({ mode: "create", columnId, dueAt: startOfDay(day).getTime() });
   }
 
   function handleEdit(cardId: string) {
