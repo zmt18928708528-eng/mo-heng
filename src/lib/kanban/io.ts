@@ -43,7 +43,6 @@ function parseCard(id: string, raw: unknown): KanbanCard | null {
       : Date.now();
   const updatedAt =
     typeof rec.updatedAt === "number" && Number.isFinite(rec.updatedAt) ? rec.updatedAt : createdAt;
-  // Object keys are the canonical IDs referenced by columns.
   const cardId = id.trim();
   if (!cardId || isColumnId(cardId) || ["__proto__", "constructor", "prototype"].includes(cardId))
     return null;
@@ -58,7 +57,7 @@ function parseCard(id: string, raw: unknown): KanbanCard | null {
 }
 
 function emptyColumns(): Columns {
-  return { todo: [], doing: [], done: [] };
+  return { plan: [], todo: [], doing: [], done: [] };
 }
 
 function parseColumns(raw: unknown, cards: Record<string, KanbanCard>): Columns {
@@ -142,7 +141,6 @@ export function parseBackup(text: string): ParsedBoard {
   if (!cardsRec && !list) throw new Error("备份缺少卡片数据。");
   const cards = list ? parseCardsArray(list) : parseCardsRecord(cardsRec!);
   const sourceCount = list ? list.length : Object.keys(cardsRec!).length;
-  // A genuinely empty board is valid; malformed nonempty data must not erase it.
   if (sourceCount > 0 && Object.keys(cards).length === 0) {
     throw new Error("备份里没有可用的卡片。");
   }
@@ -159,7 +157,9 @@ export function mergeBoards(current: ParsedBoard, incoming: ParsedBoard): Parsed
   const seen = new Set<string>();
 
   for (const col of COLUMN_IDS) {
-    const ids = [...current.columns[col], ...incoming.columns[col]];
+    const currentCol = current.columns[col] ?? [];
+    const incomingCol = incoming.columns[col] ?? [];
+    const ids = [...currentCol, ...incomingCol];
     columns[col] = ids.filter((id) => {
       if (!Object.hasOwn(cards, id) || seen.has(id)) return false;
       seen.add(id);

@@ -3,13 +3,14 @@ import test from "node:test";
 import { parseBackup, serializeBackup, mergeBoards } from "./io.ts";
 
 const card = { id: "a", title: "任务", description: "", createdAt: 1, updatedAt: 2, dueAt: 0 };
-const board = { cards: { a: card }, columns: { todo: ["a"], doing: [], done: [] } };
+const emptyColumns = { plan: [], todo: [], doing: [], done: [] };
+const board = { cards: { a: card }, columns: { ...emptyColumns, todo: ["a"] } };
 
 test("backup round trip preserves dates, content and order", () => {
   assert.deepEqual(parseBackup(serializeBackup(board)), board);
 });
 test("empty backups can be restored", () => {
-  const empty = { cards: {}, columns: { todo: [], doing: [], done: [] } };
+  const empty = { cards: {}, columns: emptyColumns };
   assert.deepEqual(parseBackup(serializeBackup(empty)), empty);
 });
 test("duplicates within and across columns appear only once; orphan cards remain visible", () => {
@@ -19,7 +20,7 @@ test("duplicates within and across columns appear only once; orphan cards remain
       columns: { todo: ["a", "a", "missing"], doing: ["a"], done: [] },
     }),
   );
-  assert.deepEqual(result.columns, { todo: ["a", "b"], doing: [], done: [] });
+  assert.deepEqual(result.columns, { ...emptyColumns, todo: ["a", "b"] });
 });
 test("record keys preserve column membership despite mismatched embedded IDs", () => {
   const result = parseBackup(
@@ -59,7 +60,7 @@ test("out-of-range due dates are normalized", () => {
 test("merging keeps one copy and uses imported content", () => {
   const incoming = {
     cards: { a: { ...card, title: "更新" } },
-    columns: { todo: [], doing: [], done: ["a"] },
+    columns: { ...emptyColumns, done: ["a"] },
   };
   const merged = mergeBoards(board, incoming);
   assert.equal(merged.cards.a.title, "更新");

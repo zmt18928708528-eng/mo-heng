@@ -55,14 +55,15 @@ const seedCards: Record<string, KanbanCard> = {
   },
   c4: {
     id: "c4",
-    title: "确定三列工作流",
-    description: "待办、进行中、已完成；每列只保留当前真正需要看见的卡片。",
+    title: "确定四列工作流",
+    description: "提前规划、待办、进行中、已完成；每列只保留当前真正需要看见的卡片。",
     createdAt: now + 3,
     updatedAt: now + 3,
   },
 };
 
 const seedColumns: Columns = {
+  plan: [],
   todo: ["c1", "c2"],
   doing: ["c3"],
   done: ["c4"],
@@ -190,7 +191,12 @@ export const useKanbanStore = create<KanbanState>()(
       replaceBoard: (board) => {
         set({
           cards: board.cards,
-          columns: board.columns,
+          columns: {
+            plan: board.columns.plan ?? [],
+            todo: board.columns.todo ?? [],
+            doing: board.columns.doing ?? [],
+            done: board.columns.done ?? [],
+          },
         });
       },
 
@@ -198,7 +204,15 @@ export const useKanbanStore = create<KanbanState>()(
         const current = get();
         const next = mergeBoards(
           { cards: current.cards, columns: current.columns },
-          board,
+          {
+            cards: board.cards,
+            columns: {
+              plan: board.columns.plan ?? [],
+              todo: board.columns.todo ?? [],
+              doing: board.columns.doing ?? [],
+              done: board.columns.done ?? [],
+            },
+          },
         );
         set(next);
       },
@@ -209,6 +223,21 @@ export const useKanbanStore = create<KanbanState>()(
         typeof window === "undefined" ? noopStorage() : localStorage,
       ),
       partialize: (state) => ({ cards: state.cards, columns: state.columns }),
+      merge: (persisted, current) => {
+        const raw = (persisted ?? {}) as Partial<KanbanState>;
+        const columns = {
+          plan: raw.columns?.plan ?? [],
+          todo: raw.columns?.todo ?? current.columns.todo,
+          doing: raw.columns?.doing ?? current.columns.doing,
+          done: raw.columns?.done ?? current.columns.done,
+        };
+        return {
+          ...current,
+          ...raw,
+          columns,
+          cards: raw.cards ?? current.cards,
+        };
+      },
       skipHydration: true,
     },
   ),
