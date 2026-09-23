@@ -34,6 +34,7 @@ import { PlanPanel } from "@/components/habits/plan-panel";
 import { startOfDay } from "@/lib/kanban/dates";
 import { COLUMN_IDS, isColumnId, type ColumnId, type KanbanCard } from "@/lib/kanban/types";
 import { findColumn, useKanbanStore } from "@/lib/kanban/store";
+import { useHabitsStore } from "@/lib/habits/store";
 import { parseBackup, serializeBackup, type ParsedBoard } from "@/lib/kanban/io";
 import { CardFace } from "./card-face";
 import { CardDialog, type CardEditor } from "./card-dialog";
@@ -70,13 +71,13 @@ function BoardColumns({
   onDelete: (cardId: string) => void;
 }) {
   function cardsIn(columnId: ColumnId): KanbanCard[] {
-    return columns[columnId]
+    return (columns[columnId] ?? [])
       .map((id) => cards[id])
       .filter((card): card is KanbanCard => Boolean(card));
   }
 
   return (
-    <div className="flex flex-1 gap-3 overflow-x-auto pb-2 snap-x snap-mandatory md:grid md:grid-cols-3 md:overflow-visible md:snap-none">
+    <div className="flex flex-1 gap-3 overflow-x-auto pb-2 snap-x snap-mandatory md:grid md:grid-cols-2 md:overflow-visible md:snap-none xl:grid-cols-4">
       {COLUMN_IDS.map((columnId) => (
         <Column
           key={columnId}
@@ -101,6 +102,7 @@ export function Board() {
   const moveCard = useKanbanStore((s) => s.moveCard);
   const replaceBoard = useKanbanStore((s) => s.replaceBoard);
   const mergeBoard = useKanbanStore((s) => s.mergeBoard);
+  const habitsByDay = useHabitsStore((s) => s.byDay);
 
   const [interactive, setInteractive] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -136,7 +138,7 @@ export function Board() {
   );
 
   const total = useMemo(
-    () => COLUMN_IDS.reduce((sum, id) => sum + columns[id].length, 0),
+    () => COLUMN_IDS.reduce((sum, id) => sum + (columns[id]?.length ?? 0), 0),
     [columns],
   );
 
@@ -207,7 +209,7 @@ export function Board() {
   }
 
   function handleAddForDay(day: Date) {
-    setEditor({ mode: "create", columnId: "todo", dueAt: startOfDay(day).getTime() });
+    setEditor({ mode: "create", columnId: "plan", dueAt: startOfDay(day).getTime() });
   }
 
   function handleEdit(cardId: string) {
@@ -262,7 +264,7 @@ export function Board() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-canvas text-ink">
-      <header className="mx-auto flex w-full max-w-6xl items-end justify-between gap-4 px-4 pb-5 pt-8 sm:px-6 sm:pt-10">
+      <header className="mx-auto flex w-full max-w-7xl items-end justify-between gap-4 px-4 pb-5 pt-8 sm:px-6 sm:pt-10">
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-muted">
             <LayoutGrid className="size-4" aria-hidden="true" />
@@ -271,8 +273,8 @@ export function Board() {
           <h1 className="mt-1 font-display text-3xl font-medium tracking-tight text-ink sm:text-4xl">
             墨衡
           </h1>
-          <p className="mt-1.5 max-w-md text-sm leading-normal text-muted">
-            待办、进行中、已完成。日历可看每天卡片；提前规划可按日打卡运动、不喝糖、洗澡10分钟内。
+          <p className="mt-1.5 max-w-lg text-sm leading-normal text-muted">
+            提前规划、待办、进行中、已完成四列同级。每日打卡独立一块，记录会写在日历上。
           </p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2 pb-1">
@@ -314,11 +316,12 @@ export function Board() {
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pb-8 sm:px-6">
+      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 pb-8 sm:px-6">
         <CalendarPanel
           month={month}
           selected={selectedDay}
           cards={cardList}
+          habitsByDay={habitsByDay}
           columnOf={(id) => findColumn(columns, id)}
           onMonthChange={setMonth}
           onSelect={handleSelectDay}
